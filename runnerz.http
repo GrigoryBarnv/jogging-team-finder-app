@@ -1,0 +1,44 @@
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+### GET findAll
+GET {{baseUrl}}/api/runs
+Accept: {{contentType}}
+
+### GET findById
+GET {{baseUrl}}/api/runs/1
+Accept: {{contentType}}
+
+### GET find id that does not exists 
+GET http://localhost:8080/api/runs/999
+
+
+### POST create
+POST {{baseUrl}}/api/runs
+Content-Type: {{contentType}}
+
+{
+  "id": 3,
+  "title": "Friday Lunch Run",
+  "startedOn": "2026-05-15T12:00:00",
+  "completedOn": "2026-05-15T12:45:00",
+  "miles": 5,
+  "location": "OUTDOOR"
+}
+
+### PUT update
+PUT {{baseUrl}}/api/runs/3
+Content-Type: {{contentType}}
+
+{
+  "id": 3,
+  "title": "Friday Lunch Run Updated",
+  "startedOn": "2026-05-15T12:15:00",
+  "completedOn": "2026-05-15T13:00:00",
+  "miles": 6,
+  "location": "INDOOR"
+}
+
+### DELETE delete
+DELETE {{baseUrl}}/api/runs/3
+Accept: {{contentType}}

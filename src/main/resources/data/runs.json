@@ -1,0 +1,84 @@
+{
+  "runs": [
+    {
+      "id": 1,
+      "title": "Morning City Loop",
+      "startedOn": "2026-06-01T06:15:00",
+      "completedOn": "2026-06-01T07:05:00",
+      "miles": 5,
+      "location": "OUTDOOR"
+    },
+    {
+      "id": 2,
+      "title": "Lunch Break Treadmill",
+      "startedOn": "2026-06-02T12:10:00",
+      "completedOn": "2026-06-02T12:55:00",
+      "miles": 4,
+      "location": "INDOOR"
+    },
+    {
+      "id": 3,
+      "title": "River Path Tempo",
+      "startedOn": "2026-06-03T18:00:00",
+      "completedOn": "2026-06-03T19:05:00",
+      "miles": 7,
+      "location": "OUTDOOR"
+    },
+    {
+      "id": 4,
+      "title": "Hill Sprint Session",
+      "startedOn": "2026-06-04T07:20:00",
+      "completedOn": "2026-06-04T08:00:00",
+      "miles": 3,
+      "location": "OUTDOOR"
+    },
+    {
+      "id": 5,
+      "title": "Recovery Jog",
+      "startedOn": "2026-06-05T17:40:00",
+      "completedOn": "2026-06-05T18:20:00",
+      "miles": 3,
+      "location": "INDOOR"
+    },
+    {
+      "id": 6,
+      "title": "Park Endurance Run",
+      "startedOn": "2026-06-06T06:30:00",
+      "completedOn": "2026-06-06T07:50:00",
+      "miles": 8,
+      "location": "OUTDOOR"
+    },
+    {
+      "id": 7,
+      "title": "Evening Track Intervals",
+      "startedOn": "2026-06-07T19:00:00",
+      "completedOn": "2026-06-07T19:55:00",
+      "miles": 5,
+      "location": "OUTDOOR"
+    },
+    {
+      "id": 8,
+      "title": "Gym Cardio Block",
+      "startedOn": "2026-06-08T08:10:00",
+      "completedOn": "2026-06-08T09:00:00",
+      "miles": 4,
+      "location": "INDOOR"
+    },
+    {
+      "id": 9,
+      "title": "Sunrise Long Run",
+      "startedOn": "2026-06-09T05:45:00",
+      "completedOn": "2026-06-09T07:35:00",
+      "miles": 10,
+      "location": "OUTDOOR"
+    },
+    {
+      "id": 10,
+      "title": "Cooldown Neighborhood Run",
+      "startedOn": "2026-06-10T20:15:00",
+      "completedOn": "2026-06-10T20:50:00",
+      "miles": 3,
+      "location": "OUTDOOR"
+    }
+  ]
+}

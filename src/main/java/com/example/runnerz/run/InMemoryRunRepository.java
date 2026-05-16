@@ -1,0 +1,121 @@
+package com.example.runnerz.run;
+
+import jakarta.annotation.PostConstruct;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class InMemoryRunRepository {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(InMemoryRunRepository.class);
+
+    private final List<Run> runs = new ArrayList<>();
+
+    public List<Run> findAll() {
+        return runs;
+    }
+
+    public Optional<Run> findById(Integer id) {
+        return runs.stream()
+                .filter(run -> run.id().equals(id))
+                .findFirst();
+    }
+
+    public void create(Run run) {
+
+        Run newRun = new Run(
+                run.id(),
+                run.title(),
+                run.startedOn(),
+                run.completedOn(),
+                run.miles(),
+                run.location(),
+                run.district(),
+                null
+        );
+
+        runs.add(newRun);
+    }
+
+    public void update(Run newRun, Integer id) {
+
+        Optional<Run> existingRun = findById(id);
+
+        if (existingRun.isPresent()) {
+
+            var r = existingRun.get();
+
+            log.info("Updating Existing Run: " + existingRun.get());
+
+            runs.set(runs.indexOf(r), newRun);
+        }
+    }
+
+    public void delete(Integer id) {
+
+        log.info("Deleting Run: " + id);
+
+        runs.removeIf(run -> run.id().equals(id));
+    }
+
+    public int count() {
+        return runs.size();
+    }
+
+    public void saveAll(List<Run> runs) {
+        runs.forEach(this::create);
+    }
+
+    public List<Run> findByLocation(String location) {
+        return runs.stream()
+                .filter(run -> run.location().name().equals(location))
+                .toList();
+    }
+
+    public List<Run> findFutureRuns(LocalDateTime now, String district, String query) {
+        String normalizedDistrict = district == null || district.isBlank() ? "ALL" : district;
+        String normalizedQuery = query == null || query.isBlank() ? "" : query.trim().toLowerCase();
+
+        return runs.stream()
+                .filter(run -> run.startedOn().isAfter(now))
+                .filter(run -> "ALL".equals(normalizedDistrict)
+                        || normalizedDistrict.equals(run.district() == null ? "" : run.district()))
+                .filter(run -> normalizedQuery.isEmpty()
+                        || run.title().toLowerCase().contains(normalizedQuery)
+                        || (run.district() != null && run.district().toLowerCase().contains(normalizedQuery)))
+                .sorted(Comparator.comparing(Run::startedOn))
+                .toList();
+    }
+
+    @PostConstruct
+    private void init() {
+
+        runs.add(new Run(
+                1,
+                "Monday Morning Run",
+                LocalDateTime.now(),
+                LocalDateTime.now().plus(30, ChronoUnit.MINUTES),
+                3,
+                Location.INDOOR,
+                "",
+                null
+        ));
+
+        runs.add(new Run(
+                2,
+                "Wednesday Evening Run",
+                LocalDateTime.now(),
+                LocalDateTime.now().plus(45, ChronoUnit.MINUTES),
+                5,
+                Location.OUTDOOR,
+                "",
+                null
+        ));
+    }
+}

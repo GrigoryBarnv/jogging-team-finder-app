@@ -1,0 +1,136 @@
+{
+  "info": {
+    "_postman_id": "d31520f2-0a8b-4ea1-8ad9-2dce75e3d600",
+    "name": "runnerz-postman-collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "GET findAll",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/runs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "runs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET findById",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/runs/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "runs",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": 3,\n  \"title\": \"Friday Lunch Run\",\n  \"startedOn\": \"2026-05-15T12:00:00\",\n  \"completedOn\": \"2026-05-15T12:45:00\",\n  \"miles\": 5,\n  \"location\": \"OUTDOOR\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/runs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "runs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PUT update",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": 3,\n  \"title\": \"Friday Lunch Run Updated\",\n  \"startedOn\": \"2026-05-15T12:15:00\",\n  \"completedOn\": \"2026-05-15T13:00:00\",\n  \"miles\": 6,\n  \"location\": \"INDOOR\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/runs/3",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "runs",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DEL delete",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/runs/3",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "runs",
+            "3"
+          ]
+        }
+      }
+    }
+  ]
+}

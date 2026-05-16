@@ -1,0 +1,66 @@
+```svg
+<svg width="800" height="260" viewBox="0 0 800 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .brand-orange { fill: #FF8A65; }
+      .brand-white { fill: #F5F5F5; }
+      .brand-gray { fill: #B8BDC7; }
+      .stroke-orange { stroke: #FF8A65; }
+      .stroke-white { stroke: #F5F5F5; }
+      .text-main {
+        font-family: Arial, Helvetica, sans-serif;
+        font-weight: 700;
+      }
+      .tagline {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 22px;
+        letter-spacing: 6px;
+        font-weight: 600;
+      }
+    </style>
+  </defs>
+
+  <!-- Circular Arc -->
+  <path d="M140 40 A90 90 0 0 1 270 40"
+        fill="none"
+        stroke="#FF8A65"
+        stroke-width="10"
+        stroke-linecap="round"/>
+
+  <path d="M280 40 A90 90 0 0 1 410 140"
+        fill="none"
+        stroke="#F5F5F5"
+        stroke-width="10"
+        stroke-linecap="round"/>
+
+  <!-- Runner 1 -->
+  <circle cx="220" cy="95" r="14" class="brand-orange"/>
+  <path d="M205 120 L240 120 L265 145 L245 160 L225 142 L210 170 L185 195"
+        stroke="#FF8A65"
+        stroke-width="14"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"/>
+
+  <!-- Runner 2 -->
+  <circle cx="300" cy="110" r="14" class="brand-white"/>
+  <path d="M285 132 L315 140 L340 160 L320 172 L302 154 L290 182 L265 198"
+        stroke="#F5F5F5"
+        stroke-width="14"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"/>
+
+  <!-- Ground -->
+  <path d="M165 210 Q270 180 375 210"
+        fill="none"
+        stroke="#F5F5F5"
+        stroke-width="6"
+        stroke-linecap="round"/>
+
+  <!-- Brand Text -->
+  <text x="60" y="255" font-size="92" class="text-main">
+    <tspan class="brand-orange">Jog</tspan><tspan class="brand-white">Teams</tspan>
+  </text>
+</svg>
+```
