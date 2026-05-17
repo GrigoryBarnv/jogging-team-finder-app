@@ -24,9 +24,17 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 public class RunController {
 
     private final JdbcClientRunRepository runRepository;
+    private final RunDeletionService runDeletionService;
+    private final RunUpdateService runUpdateService;
 
-    public RunController(JdbcClientRunRepository runRepository) {
+    public RunController(
+        JdbcClientRunRepository runRepository,
+        RunDeletionService runDeletionService,
+        RunUpdateService runUpdateService
+    ) {
         this.runRepository = runRepository;
+        this.runDeletionService = runDeletionService;
+        this.runUpdateService = runUpdateService;
     }
 
     @GetMapping("")
@@ -74,20 +82,14 @@ public class RunController {
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("{id:\\d+}")
-    void update(@RequestBody Run run, @PathVariable Integer id) {
-        if (runRepository.findById(id).isEmpty()) {
-            throw new RunNotFoundException(id);
-        }
-        runRepository.update(run, id);
+    void update(@RequestBody Run run, @PathVariable Integer id, @AuthenticationPrincipal OAuth2User user) {
+        runUpdateService.update(run, id, user);
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("{id:\\d+}")
-    void delete(@PathVariable Integer id) {
-        if (runRepository.findById(id).isEmpty()) {
-            throw new RunNotFoundException(id);
-        }
-        runRepository.delete(id);
+    void delete(@PathVariable Integer id, @AuthenticationPrincipal OAuth2User user) {
+        runDeletionService.delete(id, user);
     }
 
     @GetMapping("/location/{location}")

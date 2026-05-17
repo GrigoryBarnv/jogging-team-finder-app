@@ -410,4 +410,125 @@ Backend engineering project focused on:
 
 
 
-                                             
+#TODO 
+
+
+Start **without Kafka first**, unless your teacher/project specifically requires Kafka right now.
+
+For your current system, the best order is:
+
+```text
+1. Make the normal feature work
+2. Send email directly from Spring Boot
+3. Then move the email sending behind Kafka
+```
+
+So first build:
+
+```text
+React
+  ↓
+Spring Boot
+  ↓
+MySQL
+  ↓
+Email sender
+```
+
+Example:
+
+```text
+User joins run
+  ↓
+Backend saves participant in MySQL
+  ↓
+Backend sends email
+  ↓
+Return success
+```
+
+Once that works, upgrade to:
+
+```text
+User joins run
+  ↓
+Backend saves participant in MySQL
+  ↓
+Backend publishes USER_JOINED_RUN to Kafka
+  ↓
+Notification Service consumes event
+  ↓
+Notification Service sends email
+```
+
+Why start without Kafka?
+
+Because Kafka adds many extra things:
+
+```text
+Kafka broker
+topics
+producers
+consumers
+message serialization
+consumer groups
+retry handling
+duplicate message handling
+dead-letter topics
+Docker/network config
+```
+
+If your join/leave/cancel logic is not already solid, Kafka will make debugging much harder.
+
+The clean approach is:
+
+```text
+Phase 1: Build core app
+- create run
+- join run
+- leave run
+- cancel run
+- store everything in MySQL
+
+Phase 2: Add email directly
+- send confirmation email
+- send leave notification
+- send cancellation email
+
+Phase 3: Add Kafka
+- publish USER_JOINED_RUN
+- publish USER_LEFT_RUN
+- publish RUN_CANCELLED
+- consume events in Notification Service
+```
+
+So the answer is:
+
+**For learning and building safely: start without Kafka.**
+**For final scalable architecture: move notifications to Kafka later.**
+
+A good middle step is to write your code as if Kafka might come later:
+
+```java
+notificationService.notifyUserJoinedRun(run, user);
+```
+
+At first, that method sends email directly.
+
+Later, you change the inside of that method to publish a Kafka event instead.
+
+So your controller/service logic stays mostly the same.
+
+› Implement {feature}
+
+  gpt-5.4-mini default · ~\projekt_ordner\runnerz\runnerz
+
+  Token usage: total=1.540.716 input=1.356.946 (+ 34.577.152 cached) output=183.770 (reasoning 92.447)
+To continue this session, run codex resume 019e36ac-0996-7d52-8767-7ee41c6b75a8
+
+
+ docker start runnerz-postgres
+
+ C:\Users\grigo\projekt_ordner\runnerz\runnerz\frontend> npm run dev
+
+ C:\Users\grigo\projekt_ordner\runnerz\runnerz>         .\start-oauth-backend.ps1    
