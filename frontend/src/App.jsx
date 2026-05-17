@@ -1,4 +1,9 @@
+﻿import React from "react";
 import { useEffect, useState } from "react";
+import NicknameModal from "./NicknameModal";
+import JoinRunMessageModal from "./JoinRunMessageModal";
+import RunMessagesPanel from "./RunMessagesPanel";
+import RunEditModal from "./RunEditModal";
 
 const FILTERS = ["ALL", "OUTDOOR", "INDOOR"];
 const KM_PER_MILE = 1.609344;
@@ -23,6 +28,17 @@ const EMPTY_RUN_FORM = {
   durationMinutes: ""
 };
 
+function buildRunFormFromRun(run) {
+  return {
+    title: run.title ?? "",
+    miles: run.miles == null ? "" : String(Number((run.miles * KM_PER_MILE).toFixed(1))),
+    location: run.location ?? "OUTDOOR",
+    district: run.district || "Altstadt",
+    startedOn: toDatetimeLocalValue(run.startedOn),
+    durationMinutes: String(getDurationMinutes(run.startedOn, run.completedOn))
+  };
+}
+
 function App() {
   const [runs, setRuns] = useState([]);
   const [filter, setFilter] = useState("ALL");
@@ -35,12 +51,28 @@ function App() {
   const [runForm, setRunForm] = useState(EMPTY_RUN_FORM);
   const [savingRun, setSavingRun] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [editingRunId, setEditingRunId] = useState(null);
   const [view, setView] = useState("feed");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [profilePanel, setProfilePanel] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [districtFilter, setDistrictFilter] = useState("ALL");
   const [activeMainPanel, setActiveMainPanel] = useState("");
+  const [searchMessage, setSearchMessage] = useState("");
+  const [nicknameDraft, setNicknameDraft] = useState("");
+  const [savingNickname, setSavingNickname] = useState(false);
+  const [nicknameError, setNicknameError] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [hasFetchedMessages, setHasFetchedMessages] = useState(false);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [joinRunTarget, setJoinRunTarget] = useState(null);
+  const [joinRecipientLabel, setJoinRecipientLabel] = useState("");
+  const [joinMessageDraft, setJoinMessageDraft] = useState("");
+  const [sendingJoinMessage, setSendingJoinMessage] = useState(false);
+  const [joinMessageError, setJoinMessageError] = useState("");
+  const [replyDrafts, setReplyDrafts] = useState({});
+  const [replyingMessageId, setReplyingMessageId] = useState(null);
+  const [replyError, setReplyError] = useState("");
 
   useEffect(() => {
     async function loadCurrentUser() {
@@ -54,7 +86,10 @@ function App() {
         const user = await response.json();
         if (user.authenticated) {
           setCurrentUser(user);
+          setNicknameDraft(user.nickname || user.name || "");
           await fetchMyRuns();
+          await fetchMessages();
+          await fetchUnreadMessageCount();
         }
       } catch {
         setCurrentUser(null);
@@ -65,30 +100,54 @@ function App() {
   }, []);
 
   async function fetchRuns({ district = "ALL", query = "" } = {}) {
+    const trimmedQuery = query.trim();
+    const hasSearchCriteria = trimmedQuery !== "" || (district && district !== "ALL");
+
     try {
       setLoading(true);
       setError("");
+      setSearchMessage("");
       const params = new URLSearchParams();
 
       if (district && district !== "ALL") {
         params.set("district", district);
       }
 
-      if (query.trim() !== "") {
-        params.set("q", query.trim());
+      if (trimmedQuery !== "") {
+        params.set("q", trimmedQuery);
       }
 
       const search = params.toString();
       const response = await fetch(`/api/runs/future${search ? `?${search}` : ""}`);
 
       if (!response.ok) {
+        if (hasSearchCriteria) {
+          setRuns([]);
+          setHasFetched(true);
+          setSearchMessage(
+            "No runs found for the specified parameters, please choose different options."
+          );
+          return;
+        }
+
         throw new Error(`Request failed with status ${response.status}`);
       }
 
       const data = await response.json();
       setRuns(data);
       setHasFetched(true);
+
+      if (hasSearchCriteria && data.length === 0) {
+        setSearchMessage("No runs found for the specified parameters, please choose different options.");
+      }
     } catch (err) {
+      if (hasSearchCriteria) {
+        setRuns([]);
+        setHasFetched(true);
+        setSearchMessage("No runs found for the specified parameters, please choose different options.");
+        return;
+      }
+
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
@@ -107,6 +166,66 @@ function App() {
     setHasFetchedMine(true);
   }
 
+  async function fetchMessages() {
+    const response = await fetch("/api/messages");
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data = await response.json();
+    setMessages(data);
+    setHasFetchedMessages(true);
+  }
+
+  async function fetchUnreadMessageCount() {
+    const response = await fetch("/api/messages/unread-count");
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data = await response.json();
+    const count = Number(data);
+    setUnreadMessageCount(Number.isFinite(count) ? count : 0);
+  }
+
+  function updateNickname(event) {
+    setNicknameDraft(event.target.value);
+  }
+
+  async function submitNickname(event) {
+    event.preventDefault();
+
+    try {
+      setSavingNickname(true);
+      setNicknameError("");
+
+      const response = await fetch("/api/auth/nickname", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ nickname: nicknameDraft })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const updatedUser = await response.json();
+      setCurrentUser(updatedUser);
+      setNicknameDraft(updatedUser.nickname || updatedUser.displayName || "");
+      await fetchMyRuns();
+      await fetchMessages();
+      await fetchUnreadMessageCount();
+    } catch (err) {
+      setNicknameError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setSavingNickname(false);
+    }
+  }
+
   function startGoogleLogin() {
     window.location.href = "http://localhost:8080/oauth2/authorization/google";
   }
@@ -122,8 +241,134 @@ function App() {
     } else {
       setView("profile");
       setProfilePanel(panel);
+      if (panel === "messages" && !hasFetchedMessages) {
+        fetchMessages();
+      }
     }
     setProfileMenuOpen(false);
+  }
+
+  async function openMessagesPanel() {
+    setView("profile");
+    setProfilePanel("messages");
+    setProfileMenuOpen(false);
+    await fetchMessages();
+    await fetch("/api/messages/mark-read", { method: "POST" }).catch(() => {});
+    await fetchUnreadMessageCount();
+  }
+
+  function getDisplayName(user) {
+    if (!user) {
+      return "";
+    }
+
+    return user.displayName || user.nickname || user.name || user.email || "";
+  }
+
+  async function openJoinRunMessage(run) {
+    setJoinRunTarget(run);
+    setJoinRecipientLabel("Organizer");
+    setJoinMessageDraft(`Hi, IвЂ™d like to join your run "${run.title}".`);
+    setJoinMessageError("");
+
+    if (!run.userEmail) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/auth/display-name?email=${encodeURIComponent(run.userEmail)}`);
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      const displayName = typeof data.displayName === "string" ? data.displayName.trim() : "";
+      if (displayName) {
+        setJoinRecipientLabel(displayName);
+      }
+    } catch {
+      setJoinRecipientLabel("Organizer");
+    }
+  }
+
+  function closeJoinRunMessage() {
+    setJoinRunTarget(null);
+    setJoinRecipientLabel("");
+    setJoinMessageDraft("");
+    setJoinMessageError("");
+  }
+
+  async function submitJoinRunMessage(event) {
+    event.preventDefault();
+
+    if (!joinRunTarget) {
+      return;
+    }
+
+    try {
+      setSendingJoinMessage(true);
+      setJoinMessageError("");
+
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          runId: joinRunTarget.id,
+          messageText: joinMessageDraft
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      closeJoinRunMessage();
+      setSaveMessage("Join request sent.");
+      await fetchMessages();
+      await fetchUnreadMessageCount();
+      if (view === "profile" && profilePanel === "messages") {
+        await fetchMessages();
+      }
+    } catch (err) {
+      setJoinMessageError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setSendingJoinMessage(false);
+    }
+  }
+
+  function updateReplyDraft(messageId, value) {
+    setReplyDrafts((current) => ({ ...current, [messageId]: value }));
+  }
+
+  async function submitReply(messageId) {
+    const replyText = replyDrafts[messageId] || "";
+
+    try {
+      setReplyingMessageId(messageId);
+      setReplyError("");
+
+      const response = await fetch(`/api/messages/${messageId}/reply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ replyText })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      setReplyDrafts((current) => ({ ...current, [messageId]: "" }));
+      await fetchMessages();
+      await fetchUnreadMessageCount();
+    } catch (err) {
+      setReplyError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setReplyingMessageId(null);
+    }
   }
 
   function updateRunForm(event) {
@@ -131,7 +376,37 @@ function App() {
     setRunForm((current) => ({ ...current, [name]: value }));
   }
 
-  async function createRun(event) {
+  function parseKilometers(value) {
+    const normalized = String(value).trim().replace(",", ".");
+    const kilometers = Number(normalized);
+
+    if (!Number.isFinite(kilometers) || kilometers <= 0) {
+      throw new Error("Kilometers must be a positive number.");
+    }
+
+    return kilometers;
+  }
+
+  function startCreateRun() {
+    setEditingRunId(null);
+    setRunForm(EMPTY_RUN_FORM);
+    setSaveMessage("");
+  }
+
+  function beginEditRun(run) {
+    setEditingRunId(run.id);
+    setRunForm(buildRunFormFromRun(run));
+    setSaveMessage("");
+    setError("");
+  }
+
+  function cancelEditRun() {
+    setEditingRunId(null);
+    setRunForm(EMPTY_RUN_FORM);
+    setSaveMessage("");
+  }
+
+  async function submitRun(event) {
     event.preventDefault();
 
     try {
@@ -147,18 +422,20 @@ function App() {
       const completedOn = formatDateTimeLocal(
         new Date(new Date(runForm.startedOn).getTime() + durationMinutes * 60000)
       );
+      const kilometers = parseKilometers(runForm.miles);
 
-      const response = await fetch("/api/runs", {
-        method: "POST",
+      const isEditing = editingRunId != null;
+      const response = await fetch(isEditing ? `/api/runs/${editingRunId}` : "/api/runs", {
+        method: isEditing ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          id: null,
+          id: isEditing ? editingRunId : null,
           title: runForm.title,
           startedOn: runForm.startedOn,
           completedOn,
-          miles: Number(runForm.miles) / KM_PER_MILE,
+          miles: kilometers / KM_PER_MILE,
           location: runForm.location,
           district: runForm.district
         })
@@ -169,7 +446,8 @@ function App() {
       }
 
       setRunForm(EMPTY_RUN_FORM);
-      setSaveMessage("Run saved.");
+      setEditingRunId(null);
+      setSaveMessage(isEditing ? "Run updated." : "Run saved.");
       await fetchMyRuns();
       if (hasFetched) {
         await fetchRuns();
@@ -182,10 +460,40 @@ function App() {
     }
   }
 
+  async function deleteRun(id) {
+    try {
+      setError("");
+      const response = await fetch(`/api/runs/${id}`, {
+        method: "DELETE"
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      if (editingRunId === id) {
+        cancelEditRun();
+      }
+
+      setSaveMessage("Run deleted.");
+      await fetchMyRuns();
+      if (hasFetched) {
+        await fetchRuns();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    }
+  }
+
+  const hasSearchCriteria = searchTerm.trim() !== "" || districtFilter !== "ALL";
+  const feedRuns =
+    currentUser && hasFetchedMine && !hasSearchCriteria
+      ? mergeRunsById(runs, myRuns)
+      : runs;
   const visibleRuns =
     filter === "ALL"
-      ? runs
-      : runs.filter((run) => run.location === filter);
+      ? feedRuns
+      : feedRuns.filter((run) => run.location === filter);
 
   const myTotalKilometers = myRuns.reduce((sum, run) => sum + run.miles * KM_PER_MILE, 0);
   const myTotalMinutes = myRuns.reduce(
@@ -227,45 +535,62 @@ function App() {
           <div className="top-nav-profile-panel">
             <div className="auth-actions">
               {currentUser ? (
-                <div className="profile-menu-wrap">
+                <>
                   <button
                     type="button"
-                    className={profileMenuOpen ? "profile-button active" : "profile-button"}
-                    onClick={() => setProfileMenuOpen((open) => !open)}
-                    aria-expanded={profileMenuOpen}
+                    className="message-inbox-button"
+                    onClick={openMessagesPanel}
+                    title="Messages"
+                    aria-label={`Messages${unreadMessageCount > 0 ? `, ${unreadMessageCount} unread` : ""}`}
                   >
-                    <span className="profile-avatar">
-                      {getInitials(currentUser.name || currentUser.email)}
+                    <span className="message-inbox-icon" aria-hidden="true">
+                      ✉
                     </span>
-                    <span>
-                      My profile
-                      <small>{currentUser.name || currentUser.email}</small>
-                    </span>
+                    {unreadMessageCount > 0 ? (
+                      <span className="message-inbox-badge">{unreadMessageCount}</span>
+                    ) : null}
                   </button>
 
-                  {profileMenuOpen ? (
-                    <div className="profile-menu">
-                      <button type="button" onClick={() => openProfilePanel("analytics")}>
-                        Analytics
-                      </button>
-                      <button type="button" onClick={() => openProfilePanel("account")}>
-                        Account information
-                      </button>
-                      <button type="button" onClick={() => openProfilePanel("share")}>
-                        Share profile
-                      </button>
-                      <button type="button" onClick={() => openProfilePanel("messages")}>
-                        Messages
-                      </button>
-                      <button type="button" onClick={() => openProfilePanel("runs")}>
-                        My runs
-                      </button>
-                      <button type="button" onClick={logout}>
-                        Logout
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
+                  <div className="profile-menu-wrap">
+                    <button
+                      type="button"
+                      className={profileMenuOpen ? "profile-button active" : "profile-button"}
+                      onClick={() => setProfileMenuOpen((open) => !open)}
+                      aria-expanded={profileMenuOpen}
+                    >
+                      <span className="profile-avatar">
+                        {getInitials(getDisplayName(currentUser) || currentUser.email)}
+                      </span>
+                      <span>
+                        My profile
+                        <small>{getDisplayName(currentUser)}</small>
+                      </span>
+                    </button>
+
+                    {profileMenuOpen ? (
+                      <div className="profile-menu">
+                        <button type="button" onClick={() => openProfilePanel("analytics")}>
+                          Analytics
+                        </button>
+                        <button type="button" onClick={() => openProfilePanel("account")}>
+                          Account information
+                        </button>
+                        <button type="button" onClick={() => openProfilePanel("share")}>
+                          Share profile
+                        </button>
+                        <button type="button" onClick={openMessagesPanel}>
+                          Messages
+                        </button>
+                        <button type="button" onClick={() => openProfilePanel("runs")}>
+                          My runs
+                        </button>
+                        <button type="button" onClick={logout}>
+                          Logout
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </>
               ) : (
                 <>
                   <button
@@ -293,10 +618,20 @@ function App() {
         <section className="profile-section">
           <ProfilePanel
             currentUser={currentUser}
+            displayName={getDisplayName(currentUser)}
             myRuns={myRuns}
             myTotalKilometers={myTotalKilometers}
             myTotalMinutes={myTotalMinutes}
             panel={profilePanel}
+            messages={messages}
+            replyDrafts={replyDrafts}
+            onReplyDraftChange={updateReplyDraft}
+            onReply={submitReply}
+            replyingMessageId={replyingMessageId}
+            replyError={replyError}
+            beginEditRun={beginEditRun}
+            deleteRun={deleteRun}
+            onContact={openJoinRunMessage}
           />
         </section>
       ) : null}
@@ -327,8 +662,8 @@ function App() {
               <strong>{myTotalMinutes} min</strong>
             </article>
             <article>
-              <span>Average pace</span>
-              <strong>{myTotalKilometers > 0 ? formatPace(myTotalMinutes / myTotalKilometers) : "--"}</strong>
+              <span>Average speed</span>
+              <strong>{myTotalKilometers > 0 ? formatSpeed(myTotalKilometers, myTotalMinutes) : "--"}</strong>
             </article>
             <article>
               <span>Longest run</span>
@@ -341,7 +676,13 @@ function App() {
           </div>
 
           <section className="run-list-section">
-            <RunList runs={myRuns} />
+            <RunList
+              runs={myRuns}
+              currentUser={currentUser}
+              onEdit={beginEditRun}
+              onDelete={deleteRun}
+              onContact={openJoinRunMessage}
+            />
           </section>
         </section>
       ) : null}
@@ -352,7 +693,10 @@ function App() {
             <button
               type="button"
               className={activeMainPanel === "create" ? "main-action-button active" : "main-action-button"}
-              onClick={() => setActiveMainPanel((current) => (current === "create" ? "" : "create"))}
+              onClick={() => {
+                setActiveMainPanel((current) => (current === "create" ? "" : "create"));
+                startCreateRun();
+              }}
               aria-pressed={activeMainPanel === "create"}
             >
               <div className="main-action-copy">
@@ -379,7 +723,7 @@ function App() {
                 {currentUser ? (
                   <>
                     <RunForm
-                      createRun={createRun}
+                      createRun={submitRun}
                       runForm={runForm}
                       savingRun={savingRun}
                       updateRunForm={updateRunForm}
@@ -443,8 +787,48 @@ function App() {
 
       {view === "feed" && activeMainPanel !== "create" && hasFetched && !loading && !error ? (
         <section className="run-list-section">
-          <RunList runs={visibleRuns} />
+          <RunList
+            runs={visibleRuns}
+            currentUser={currentUser}
+            onEdit={beginEditRun}
+            onDelete={deleteRun}
+            onContact={openJoinRunMessage}
+            emptyMessage={searchMessage || "No runs match this filter."}
+          />
         </section>
+      ) : null}
+
+      <RunEditModal
+        districtOptions={DRESDEN_DISTRICTS}
+        editingRunId={editingRunId}
+        onClose={cancelEditRun}
+        onSubmit={submitRun}
+        runForm={runForm}
+        savingRun={savingRun}
+        updateRunForm={updateRunForm}
+      />
+
+      {joinRunTarget ? (
+        <JoinRunMessageModal
+          run={joinRunTarget}
+          recipientLabel={joinRecipientLabel}
+          message={joinMessageDraft}
+          onChange={(event) => setJoinMessageDraft(event.target.value)}
+          onClose={closeJoinRunMessage}
+          onSubmit={submitJoinRunMessage}
+          saving={sendingJoinMessage}
+          error={joinMessageError}
+        />
+      ) : null}
+
+      {currentUser && currentUser.needsNickname ? (
+        <NicknameModal
+          nickname={nicknameDraft}
+          onChange={updateNickname}
+          onSubmit={submitNickname}
+          saving={savingNickname}
+          error={nicknameError}
+        />
       ) : null}
 
       <section className="about-section" aria-labelledby="about-us-title">
@@ -510,11 +894,12 @@ function RunForm({ createRun, runForm, savingRun, updateRunForm }) {
         Kilometers
         <input
           name="miles"
-          type="number"
-          min="1"
-          step="1"
+          type="text"
+          inputMode="decimal"
+          pattern="[0-9]+([.,][0-9]+)?"
           value={runForm.miles}
           onChange={updateRunForm}
+          placeholder="5.4 or 5,4"
           required
         />
       </label>
@@ -562,14 +947,32 @@ function RunForm({ createRun, runForm, savingRun, updateRunForm }) {
         />
       </label>
 
-      <button type="submit" className="primary-action" disabled={savingRun}>
-        {savingRun ? "Publishing..." : "Publish run"}
-      </button>
+      <div className="run-form-actions">
+        <button type="submit" className="primary-action" disabled={savingRun}>
+          {savingRun ? "Saving..." : "Publish run"}
+        </button>
+      </div>
     </form>
   );
 }
 
-function ProfilePanel({ currentUser, myRuns, myTotalKilometers, myTotalMinutes, panel }) {
+function ProfilePanel({
+  currentUser,
+  displayName,
+  myRuns,
+  myTotalKilometers,
+  myTotalMinutes,
+  panel,
+  messages,
+  replyDrafts,
+  onReplyDraftChange,
+  onReply,
+  replyingMessageId,
+  replyError,
+  beginEditRun,
+  deleteRun,
+  onContact
+}) {
   if (panel === "analytics") {
     return (
       <>
@@ -587,10 +990,10 @@ function ProfilePanel({ currentUser, myRuns, myTotalKilometers, myTotalMinutes, 
             <span>Total time</span>
             <strong>{myTotalMinutes} min</strong>
           </article>
-          <article>
-            <span>Average pace</span>
-            <strong>{myTotalKilometers > 0 ? formatPace(myTotalMinutes / myTotalKilometers) : "--"}</strong>
-          </article>
+            <article>
+              <span>Average speed</span>
+              <strong>{myTotalKilometers > 0 ? formatSpeed(myTotalKilometers, myTotalMinutes) : "--"}</strong>
+            </article>
         </div>
       </>
     );
@@ -602,8 +1005,8 @@ function ProfilePanel({ currentUser, myRuns, myTotalKilometers, myTotalMinutes, 
         <ProfileHeading currentUser={currentUser} title="Account information" />
         <dl className="account-list">
           <div>
-            <dt>Name</dt>
-            <dd>{currentUser.name || "Not provided"}</dd>
+            <dt>Nickname</dt>
+            <dd>{displayName || "Not provided"}</dd>
           </div>
           <div>
             <dt>Email</dt>
@@ -626,8 +1029,16 @@ function ProfilePanel({ currentUser, myRuns, myTotalKilometers, myTotalMinutes, 
   if (panel === "messages") {
     return (
       <>
-        <ProfileHeading currentUser={currentUser} title="Messages" />
-        <p className="status">No messages yet.</p>
+      <ProfileHeading currentUser={currentUser} title="Messages" />
+        <RunMessagesPanel
+          messages={messages}
+          currentUser={currentUser}
+          onReply={onReply}
+          onReplyDraftChange={onReplyDraftChange}
+          replyDrafts={replyDrafts}
+          replyingMessageId={replyingMessageId}
+          replyError={replyError}
+        />
       </>
     );
   }
@@ -635,7 +1046,13 @@ function ProfilePanel({ currentUser, myRuns, myTotalKilometers, myTotalMinutes, 
   return (
     <>
       <ProfileHeading currentUser={currentUser} title="My runs" />
-      <RunList runs={myRuns} />
+      <RunList
+        runs={myRuns}
+        currentUser={currentUser}
+        onEdit={beginEditRun}
+        onDelete={deleteRun}
+        onContact={onContact}
+      />
     </>
   );
 }
@@ -647,21 +1064,24 @@ function ProfileHeading({ currentUser, title }) {
         <p className="eyebrow">My profile</p>
         <h2>{title}</h2>
       </div>
-      <span>{currentUser.email}</span>
+      <span>{currentUser.displayName || currentUser.nickname || currentUser.name || currentUser.email}</span>
     </div>
   );
 }
 
-function RunList({ runs }) {
+function RunList({ runs, currentUser, onEdit, onDelete, onContact, emptyMessage = "No runs match this filter." }) {
   if (runs.length === 0) {
-    return <p className="status">No runs match this filter.</p>;
+    return <p className="status">{emptyMessage}</p>;
   }
 
   return (
     <div className="run-list">
       {runs.map((run) => {
         const duration = getDurationMinutes(run.startedOn, run.completedOn);
-        const pace = formatPace(duration / (run.miles * KM_PER_MILE));
+        const speed = formatSpeed(run.miles * KM_PER_MILE, duration);
+        const isOwnRun = Boolean(
+          currentUser?.email && run.userEmail && currentUser.email === run.userEmail
+        );
 
         return (
           <article key={run.id} className="run-row">
@@ -671,7 +1091,10 @@ function RunList({ runs }) {
               </span>
               <div>
                 <h3>{run.title}</h3>
-                <span>#{run.id} · {run.district || "No district"}</span>
+                <span>
+                  #{run.id} · {run.district || "No district"}
+                </span>
+                {isOwnRun ? <span className="run-owner-badge">Your run</span> : null}
               </div>
             </div>
 
@@ -684,17 +1107,91 @@ function RunList({ runs }) {
               <strong>{duration} min</strong>
             </div>
             <div className="run-list-metric">
-              <span>Pace</span>
-              <strong>{pace}</strong>
+              <span>Speed</span>
+              <strong>{speed}</strong>
             </div>
             <div className="run-list-metric">
-              <span>Started</span>
+              <span>Start</span>
               <strong>{formatDate(run.startedOn)}</strong>
             </div>
+            {isOwnRun ? (
+              <div className="run-actions" aria-label={`Actions for run ${run.title}`}>
+                <button
+                  type="button"
+                  className="run-action-button edit"
+                  onClick={() => onEdit(run)}
+                  title="Edit"
+                  aria-label={`Edit run ${run.title}`}
+                >
+                  ✎
+                </button>
+                <DeleteRunButton run={run} onDelete={onDelete} />
+              </div>
+            ) : (
+              <div className="run-actions" aria-label={`Contact organizer for run ${run.title}`}>
+                <ContactOrganizerButton run={run} onContact={onContact} currentUser={currentUser} />
+              </div>
+            )}
           </article>
         );
       })}
     </div>
+  );
+}
+
+function DeleteRunButton({ run, onDelete }) {
+  return (
+    <button
+      type="button"
+      className="run-action-button delete"
+      onClick={() => onDelete(run.id)}
+      title="Delete"
+      aria-label={`Delete run ${run.title}`}
+    >
+      ×
+    </button>
+  );
+}
+
+function ContactOrganizerButton({ run, onContact, currentUser }) {
+  if (!currentUser) {
+    return (
+      <button
+        type="button"
+        className="run-action-button contact disabled"
+        title="Login to contact organizer"
+        aria-label={`Login to contact organizer for run ${run.title}`}
+        disabled
+      >
+        ✉
+      </button>
+    );
+  }
+
+  if (!run.userEmail) {
+    return (
+      <button
+        type="button"
+        className="run-action-button contact disabled"
+        title="Contact organizer"
+        aria-label={`Contact organizer for run ${run.title}`}
+        disabled
+      >
+        ✉
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="run-action-button contact"
+      onClick={() => onContact(run)}
+      title="Contact organizer"
+      aria-label={`Contact organizer for run ${run.title}`}
+    >
+      ✉
+    </button>
   );
 }
 
@@ -724,16 +1221,15 @@ function getDurationMinutes(startedOn, completedOn) {
   return Math.round((end.getTime() - start.getTime()) / 60000);
 }
 
-function formatPace(minutesPerMile) {
-  if (!Number.isFinite(minutesPerMile) || minutesPerMile <= 0) {
+function formatSpeed(kilometers, minutes) {
+  const hours = minutes / 60;
+  const speed = kilometers / hours;
+
+  if (!Number.isFinite(speed) || speed <= 0) {
     return "--";
   }
 
-  const wholeMinutes = Math.floor(minutesPerMile);
-  const seconds = Math.round((minutesPerMile - wholeMinutes) * 60);
-  const normalizedMinutes = seconds === 60 ? wholeMinutes + 1 : wholeMinutes;
-  const normalizedSeconds = seconds === 60 ? 0 : seconds;
-  return `${normalizedMinutes}:${String(normalizedSeconds).padStart(2, "0")} /km`;
+  return `${speed.toFixed(1)} km/h`;
 }
 
 function formatDate(value) {
@@ -747,6 +1243,20 @@ function formatDate(value) {
 
 function formatDistance(value) {
   return Number(value.toFixed(1));
+}
+
+function mergeRunsById(primaryRuns, secondaryRuns) {
+  const merged = new Map();
+
+  for (const run of primaryRuns) {
+    merged.set(run.id, run);
+  }
+
+  for (const run of secondaryRuns) {
+    merged.set(run.id, run);
+  }
+
+  return Array.from(merged.values());
 }
 
 function formatDateTimeLocal(date) {
@@ -765,4 +1275,14 @@ function formatDateTimeLocal(date) {
   ].join("");
 }
 
+function toDatetimeLocalValue(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return formatDateTimeLocal(date);
+}
+
 export default App;
+
