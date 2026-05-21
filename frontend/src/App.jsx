@@ -7,6 +7,7 @@ import RunEditModal from "./RunEditModal";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const AUTH_BASE = (import.meta.env.VITE_AUTH_BASE_URL || API_BASE || "http://localhost:8080").replace(/\/$/, "");
+const BRAND_LOGO_SRC = `${import.meta.env.BASE_URL}media/final_logo.png`;
 
 const KM_PER_MILE = 1.609344;
 const DRESDEN_DISTRICTS = [
@@ -523,7 +524,7 @@ function App() {
             >
               <img
                 className="brand-logo-image"
-                src="/media/final_logo.png"
+                src={BRAND_LOGO_SRC}
                 alt=""
                 aria-hidden="true"
               />
