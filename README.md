@@ -1,534 +1,149 @@
-# RunTogether 🏃‍♂️🏃‍♀️
+# JogTeams
 
-> Event-driven social running platform for finding running partners nearby.
+JogTeams is a backend-driven web application for organizing social running sessions.
+Users can create runs, discover runs, request to join, and communicate through in-app messages.
 
-RunTogether is a backend-focused microservices application that helps runners discover, join, and organize social running sessions.
+## Core Functions
 
-Instead of running alone, users can create public running sessions, discover nearby runners with similar pace and distance preferences, and join scheduled runs in real time.
+- Google OAuth login
+- Nickname setup and profile display
+- Create, edit, and delete own runs
+- Browse and filter run feed
+- Join request messaging between runners
+- Reply to join requests
+- Unread message badge in UI
+- Email notification for join requests
+- Kafka event publishing and consuming for join notifications
 
-The project focuses heavily on:
+## Tech Stack
 
-* distributed systems,
-* event-driven architecture,
-* scalable backend design,
-* geospatial search,
-* asynchronous communication.
+- Java 21
+- Spring Boot 4
+- Spring Security (OAuth2 client)
+- Spring JDBC / Data JDBC
+- PostgreSQL
+- Apache Kafka
+- Docker Compose
+- React + Vite
+- Maven
 
----
+## Architecture
 
-# 🚀 Features (Phase 1 MVP)
+Client:
+- React frontend (`localhost:5173`)
 
-## Authentication
+Backend:
+- Spring Boot API (`localhost:8080`)
+- REST endpoints for auth, runs, and messages
 
-* JWT-based authentication
-* User registration/login
-* Role-based access
+Data and messaging:
+- PostgreSQL for persistent data
+- Kafka for asynchronous notification events
 
-## Run Sessions
+## Kafka Integration
 
-* Create running sessions
-* Join running sessions
-* Cancel running sessions
-* Search nearby runs
+When a user sends a join request:
 
-## User Profiles
+1. Backend stores the message in PostgreSQL
+2. Backend publishes event to topic `run-events`
+3. Kafka consumer receives event
+4. Consumer triggers organizer email notification
 
-* Preferred pace
-* Preferred distance
-* Skill level
-* Bio/profile info
+Kafka classes:
 
-## Discovery
+- `src/main/java/com/example/runnerz/kafka/RunJoinRequestedEvent.java`
+- `src/main/java/com/example/runnerz/kafka/RunMessageKafkaProducer.java`
+- `src/main/java/com/example/runnerz/kafka/RunJoinRequestedConsumer.java`
+- `src/main/java/com/example/runnerz/kafka/KafkaTopicsConfig.java`
 
-* Find nearby running sessions
-* Filter by:
+## Local Setup
 
-  * location
-  * pace
-  * distance
-  * time
-
-## Notifications
-
-* Run confirmations
-* Join notifications
-* Cancellation notifications
-
----
-
-# 🧠 Core Idea
-
-Most runners train alone.
-
-RunTogether solves this by creating a social platform where runners can:
-
-* find compatible running partners,
-* discover local group runs,
-* stay motivated through accountability,
-* build consistent running habits.
-
-Think:
-
-```text
-BlaBlaCar / Meetup for runners
-```
-
----
-
-# 🏗️ Architecture
-
-The project follows a microservices + event-driven architecture.
-
-```text
-Frontend / Client
-        ↓
-API Gateway
-        ↓
-------------------------------------------------
-| Auth Service                                 |
-| Run Session Service                          |
-| Notification Service                         |
-| Analytics Service (future phase)             |
-------------------------------------------------
-        ↓
-Kafka Event Bus
-        ↓
-PostgreSQL + Redis
-```
-
----
-
-# ⚙️ Services
-
-## 🔐 Auth Service
-
-Handles:
-
-* registration
-* login
-* JWT authentication
-* user profiles
-
-### Responsibilities
-
-* user management
-* token generation
-* authorization
-
----
-
-## 🏃 Run Session Service
-
-Core business logic of the platform.
-
-Handles:
-
-* creating run sessions
-* joining sessions
-* cancelling sessions
-* searching nearby runs
-
-### Main Entity
-
-```java
-RunSession {
-    id
-    hostUserId
-    title
-    description
-    startLocation
-    distanceKm
-    targetPace
-    startTime
-    maxParticipants
-    difficulty
-    status
-}
-```
-
-### Participant Entity
-
-```java
-RunParticipant {
-    runSessionId
-    userId
-    joinedAt
-}
-```
-
----
-
-## 🔔 Notification Service
-
-Consumes Kafka events and sends:
-
-* confirmations
-* reminders
-* cancellations
-* activity updates
-
-### Example Events
-
-```text
-RUN_CREATED
-USER_JOINED_RUN
-RUN_CANCELLED
-```
-
----
-
-## 📊 Analytics Service (Future Phase)
-
-Tracks:
-
-* platform activity
-* popular routes
-* active runners
-* trends
-* engagement statistics
-
----
-
-# 📨 Kafka Event Flow
-
-The platform uses Kafka for asynchronous communication between services.
-
-Example:
-
-```text
-USER_JOINED_RUN
-        ↓
-Notification Service
-        ↓
-Send confirmation notification
-```
-
-Other event examples:
-
-```text
-RUN_CREATED
-USER_JOINED_RUN
-RUN_CANCELLED
-RUN_REMINDER
-```
-
-This architecture allows:
-
-* loose coupling,
-* scalability,
-* async processing,
-* extensibility.
-
----
-
-# 🗄️ PostgreSQL Usage
-
-PostgreSQL is used as the primary persistent database.
-
-Stores:
-
-* users
-* running sessions
-* participants
-* profiles
-
-Future versions may integrate:
-
-* PostGIS for geospatial queries.
-
----
-
-# ⚡ Redis Usage
-
-Redis is used for:
-
-* nearby session caching
-* trending runs
-* active users
-* performance optimization
-
----
-
-# 🐳 Docker Infrastructure
-
-The entire platform runs using Docker Compose.
-
-```yaml
-services:
-  postgres:
-  kafka:
-  zookeeper:
-  redis:
-  auth-service:
-  run-session-service:
-  notification-service:
-```
-
----
-
-# 📂 Current Project Structure
-
-```text
-run/
-  Run.java
-  RunController
-  RunRepository
-  RunService
-  RunDto
-  Location
-```
-
-The project already follows proper backend layering:
-
-* entities
-* repositories
-* services
-* controllers
-* DTOs
-
-The next step is evolving:
-
-```text
-Run
-```
-
-into:
-
-```text
-RunSession
-```
-
-to support social and discoverable running events.
-
----
-
-# 🛠️ Tech Stack
-
-| Technology     | Purpose                      |
-| -------------- | ---------------------------- |
-| Java           | Backend language             |
-| Spring Boot    | Microservices framework      |
-| PostgreSQL     | Persistent storage           |
-| Kafka          | Event-driven messaging       |
-| Redis          | Caching                      |
-| Docker Compose | Infrastructure orchestration |
-| JWT            | Authentication               |
-| Maven          | Dependency management        |
-
----
-
-# 📌 Planned Features
-
-## Phase 2
-
-* live chat
-* friend system
-* activity feed
-* group runs
-* recommendations
-
-## Phase 3
-
-* GPS tracking
-* PostGIS integration
-* AI-based runner matching
-* wearable integrations
-* live location sharing
-
----
-
-# 🎯 Project Goals
-
-This project was created to explore:
-
-* distributed systems,
-* scalable backend architecture,
-* event-driven microservices,
-* real-world asynchronous workflows,
-* geospatial and social applications.
-
----
-
-# ▶️ Running Locally
+## 1) Start containers
 
 ```bash
-docker compose up --build
+docker compose up -d postgres zookeeper kafka
 ```
 
----
+## 2) Start backend
 
-# 📖 API Examples
-
-## Create Run Session
-
-```http
-POST /runs
+```powershell
+.\start-oauth-backend.ps1
 ```
 
-## Join Run
+## 3) Start frontend
 
-```http
-POST /runs/{id}/join
+```powershell
+cd frontend
+npm run dev
 ```
 
-## Search Nearby Runs
+## 4) Open app
 
-```http
-GET /runs/nearby
-```
+- `http://localhost:5173`
 
----
+## Configuration
 
-# 👤 Author
+Database defaults:
 
-Backend engineering project focused on:
+- Host: `localhost`
+- Port: `5432`
+- Database: `runnerz`
+- User: `das`
+- Password: `password`
 
-* scalable architecture,
-* distributed systems,
-* event-driven backend development.
+Mail environment variables:
 
+- `SPRING_MAIL_HOST`
+- `SPRING_MAIL_PORT` (default `587`)
+- `SPRING_MAIL_USERNAME`
+- `SPRING_MAIL_PASSWORD`
+- `SPRING_MAIL_SMTP_AUTH` (default `true`)
+- `SPRING_MAIL_SMTP_STARTTLS` (default `true`)
+- `APP_MAIL_FROM` (default `no-reply@jogteams.local`)
 
+Kafka defaults:
 
-# Starting 
+- `SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:29092`
+- `APP_KAFKA_TOPIC_RUN_EVENTS=run-events`
+- `APP_KAFKA_GROUP_NOTIFICATIONS=runnerz-notification-group`
 
+## API Overview
 
-* Start the backend auth with google + java springboot 
-        cd C:\Users\grigo\projekt_ordner\runnerz\runnerz
-        .\start-oauth-backend.ps1                    
+Auth:
 
-*start frontend React at 5173
-        npm run dev
+- `GET /api/auth/me`
+- `PUT /api/auth/nickname`
 
+Runs:
 
-*start backend java at 8080
-        mnv 
+- `GET /api/runs/future`
+- `GET /api/runs/me`
+- `POST /api/runs`
+- `PUT /api/runs/{id}`
+- `DELETE /api/runs/{id}`
 
+Messages:
 
-*start docker compose yaml with sql database
-        docker compose -f .\target\compose.yaml up -d postgres 
+- `GET /api/messages`
+- `GET /api/messages/unread-count`
+- `POST /api/messages`
+- `POST /api/messages/{id}/reply`
+- `POST /api/messages/mark-read`
 
+## Screenshots
 
+### Main Page
 
+![Main page](screenshots/main_page.png)
 
-#TODO 
+### Run Creation
 
+![Run creation](screenshots/run_creation.png)
 
-Start **without Kafka first**, unless your teacher/project specifically requires Kafka right now.
+### Messages
 
-For your current system, the best order is:
+![Messages](screenshots/messages.png)
 
-```text
-1. Make the normal feature work
-2. Send email directly from Spring Boot
-3. Then move the email sending behind Kafka
-```
+### Analytics
 
-So first build:
-
-```text
-React
-  ↓
-Spring Boot
-  ↓
-MySQL
-  ↓
-Email sender
-```
-
-Example:
-
-```text
-User joins run
-  ↓
-Backend saves participant in MySQL
-  ↓
-Backend sends email
-  ↓
-Return success
-```
-
-Once that works, upgrade to:
-
-```text
-User joins run
-  ↓
-Backend saves participant in MySQL
-  ↓
-Backend publishes USER_JOINED_RUN to Kafka
-  ↓
-Notification Service consumes event
-  ↓
-Notification Service sends email
-```
-
-Why start without Kafka?
-
-Because Kafka adds many extra things:
-
-```text
-Kafka broker
-topics
-producers
-consumers
-message serialization
-consumer groups
-retry handling
-duplicate message handling
-dead-letter topics
-Docker/network config
-```
-
-If your join/leave/cancel logic is not already solid, Kafka will make debugging much harder.
-
-The clean approach is:
-
-```text
-Phase 1: Build core app
-- create run
-- join run
-- leave run
-- cancel run
-- store everything in MySQL
-
-Phase 2: Add email directly
-- send confirmation email
-- send leave notification
-- send cancellation email
-
-Phase 3: Add Kafka
-- publish USER_JOINED_RUN
-- publish USER_LEFT_RUN
-- publish RUN_CANCELLED
-- consume events in Notification Service
-```
-
-So the answer is:
-
-**For learning and building safely: start without Kafka.**
-**For final scalable architecture: move notifications to Kafka later.**
-
-A good middle step is to write your code as if Kafka might come later:
-
-```java
-notificationService.notifyUserJoinedRun(run, user);
-```
-
-At first, that method sends email directly.
-
-Later, you change the inside of that method to publish a Kafka event instead.
-
-So your controller/service logic stays mostly the same.
-
-› Implement {feature}
-
-  gpt-5.4-mini default · ~\projekt_ordner\runnerz\runnerz
-
-  Token usage: total=1.540.716 input=1.356.946 (+ 34.577.152 cached) output=183.770 (reasoning 92.447)
-To continue this session, run codex resume 019e36ac-0996-7d52-8767-7ee41c6b75a8
-
-
- docker start runnerz-postgres
-
- C:\Users\grigo\projekt_ordner\runnerz\runnerz\frontend> npm run dev
-
- C:\Users\grigo\projekt_ordner\runnerz\runnerz>         .\start-oauth-backend.ps1    
+![Analytics](screenshots/analytics.png)

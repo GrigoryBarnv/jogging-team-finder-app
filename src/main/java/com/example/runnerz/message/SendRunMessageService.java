@@ -1,6 +1,7 @@
 package com.example.runnerz.message;
 
 import java.time.LocalDateTime;
+import com.example.runnerz.kafka.RunMessageKafkaProducer;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -15,15 +16,18 @@ public class SendRunMessageService {
     private final RunMessageRepository runMessageRepository;
     private final JdbcClientRunRepository runRepository;
     private final UserProfileService userProfileService;
+    private final RunMessageKafkaProducer runMessageKafkaProducer;
 
     public SendRunMessageService(
         RunMessageRepository runMessageRepository,
         JdbcClientRunRepository runRepository,
-        UserProfileService userProfileService
+        UserProfileService userProfileService,
+        RunMessageKafkaProducer runMessageKafkaProducer
     ) {
         this.runMessageRepository = runMessageRepository;
         this.runRepository = runRepository;
         this.userProfileService = userProfileService;
+        this.runMessageKafkaProducer = runMessageKafkaProducer;
     }
 
     public RunMessage send(OAuth2User user, JoinRunMessageRequest request) {
@@ -61,7 +65,10 @@ public class SendRunMessageService {
             null
         );
 
-        return runMessageRepository.save(message);
+        RunMessage savedMessage = runMessageRepository.save(message);
+        // Message persistence stays synchronous; notification is now async via Kafka.
+        runMessageKafkaProducer.publishJoinRequested(savedMessage);
+        return savedMessage;
     }
 
     private String requireEmail(OAuth2User user) {

@@ -5,7 +5,6 @@ import JoinRunMessageModal from "./JoinRunMessageModal";
 import RunMessagesPanel from "./RunMessagesPanel";
 import RunEditModal from "./RunEditModal";
 
-const FILTERS = ["ALL", "OUTDOOR", "INDOOR"];
 const KM_PER_MILE = 1.609344;
 const DRESDEN_DISTRICTS = [
   "Altstadt",
@@ -41,7 +40,6 @@ function buildRunFormFromRun(run) {
 
 function App() {
   const [runs, setRuns] = useState([]);
-  const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasFetched, setHasFetched] = useState(false);
@@ -52,6 +50,7 @@ function App() {
   const [savingRun, setSavingRun] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [editingRunId, setEditingRunId] = useState(null);
+  const [myRunsCreateOpen, setMyRunsCreateOpen] = useState(false);
   const [view, setView] = useState("feed");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [profilePanel, setProfilePanel] = useState("");
@@ -91,6 +90,7 @@ function App() {
           await fetchMessages();
           await fetchUnreadMessageCount();
         }
+        await fetchRuns();
       } catch {
         setCurrentUser(null);
       }
@@ -490,11 +490,6 @@ function App() {
     currentUser && hasFetchedMine && !hasSearchCriteria
       ? mergeRunsById(runs, myRuns)
       : runs;
-  const visibleRuns =
-    filter === "ALL"
-      ? feedRuns
-      : feedRuns.filter((run) => run.location === filter);
-
   const myTotalKilometers = myRuns.reduce((sum, run) => sum + run.miles * KM_PER_MILE, 0);
   const myTotalMinutes = myRuns.reduce(
     (sum, run) => sum + getDurationMinutes(run.startedOn, run.completedOn),
@@ -643,9 +638,21 @@ function App() {
               <p className="eyebrow">My profile</p>
               <h2>My runs</h2>
             </div>
-            <button type="button" className="primary-action" onClick={() => setView("feed")}>
-              Back to feed
-            </button>
+            <div className="toolbar-actions">
+              <button
+                type="button"
+                className="primary-action"
+                onClick={() => {
+                  setMyRunsCreateOpen((current) => !current);
+                  startCreateRun();
+                }}
+              >
+                {myRunsCreateOpen ? "Close create run" : "Create run"}
+              </button>
+              <button type="button" className="secondary-action" onClick={() => setView("feed")}>
+                Back to feed
+              </button>
+            </div>
           </div>
 
           <div className="profile-summary-grid">
@@ -674,6 +681,18 @@ function App() {
               <strong>{longestMyRun.title}</strong>
             </article>
           </div>
+
+          {myRunsCreateOpen ? (
+            <div className="main-action-window">
+              <RunForm
+                createRun={submitRun}
+                runForm={runForm}
+                savingRun={savingRun}
+                updateRunForm={updateRunForm}
+              />
+              {saveMessage ? <p className="status success">{saveMessage}</p> : null}
+            </div>
+          ) : null}
 
           <section className="run-list-section">
             <RunList
@@ -779,16 +798,13 @@ function App() {
         </>
       ) : null}
 
-      {!hasFetched && !loading && !error ? (
-        <p className="status">Click the fetch button to load upcoming runs from SQL.</p>
-      ) : null}
-      {loading ? <p className="status">Loading runs from SQL...</p> : null}
+      {loading ? <p className="status">Loading runs...</p> : null}
       {error ? <p className="status error">Could not load runs: {error}</p> : null}
 
       {view === "feed" && activeMainPanel !== "create" && hasFetched && !loading && !error ? (
         <section className="run-list-section">
           <RunList
-            runs={visibleRuns}
+            runs={feedRuns}
             currentUser={currentUser}
             onEdit={beginEditRun}
             onDelete={deleteRun}
@@ -839,37 +855,6 @@ function App() {
             Find runs, create your own route, and connect with jogging partners
             across Dresden.
           </p>
-        </div>
-      </section>
-
-      <section className="toolbar">
-        <div>
-          <h2>Run feed</h2>
-          <p>Fetch upcoming runs from the SQL database through the Spring backend.</p>
-        </div>
-
-        <div className="toolbar-actions">
-          <button
-            type="button"
-            className="primary-action"
-            onClick={fetchRuns}
-            disabled={loading}
-          >
-            {loading ? "Fetching..." : "Fetch upcoming SQL runs"}
-          </button>
-
-          <div className="filter-row" role="tablist" aria-label="Run filters">
-            {FILTERS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={value === filter ? "filter active" : "filter"}
-                onClick={() => setFilter(value)}
-              >
-                {labelFor(value)}
-              </button>
-            ))}
-          </div>
         </div>
       </section>
     </div>
@@ -974,27 +959,87 @@ function ProfilePanel({
   onContact
 }) {
   if (panel === "analytics") {
+    const averageSpeedValue = calculateAverageSpeed(myTotalKilometers, myTotalMinutes);
+    const longestRunKm = myRuns.reduce((max, run) => Math.max(max, run.miles * KM_PER_MILE), 0);
+    const recentRuns = [...myRuns]
+      .sort((a, b) => new Date(a.startedOn).getTime() - new Date(b.startedOn).getTime())
+      .slice(-5);
+    const recentMaxDistance = recentRuns.reduce(
+      (max, run) => Math.max(max, run.miles * KM_PER_MILE),
+      1
+    );
+    const consistencyPercent = calculateConsistencyPercent(myRuns.length);
+
     return (
       <>
         <ProfileHeading currentUser={currentUser} title="Analytics" />
-        <div className="profile-summary-grid">
-          <article>
-            <span>Personal runs</span>
-            <strong>{myRuns.length}</strong>
+        <div className="analytics-panel">
+          <article className="analytics-ring-card">
+            <p className="eyebrow">Consistency</p>
+            <div
+              className="analytics-ring"
+              style={{
+                background: `conic-gradient(#8be7ab ${consistencyPercent}%, rgba(255,255,255,0.12) ${consistencyPercent}% 100%)`
+              }}
+            >
+              <div className="analytics-ring-center">
+                <strong>{consistencyPercent}%</strong>
+                <span>active</span>
+              </div>
+            </div>
+            <p className="analytics-ring-note">Based on how many runs you already logged.</p>
           </article>
-          <article>
-            <span>Total kilometers</span>
-            <strong>{formatDistance(myTotalKilometers)}</strong>
-          </article>
-          <article>
-            <span>Total time</span>
-            <strong>{myTotalMinutes} min</strong>
-          </article>
+
+          <div className="analytics-cards">
+            <article>
+              <span>Personal runs</span>
+              <strong>{myRuns.length}</strong>
+            </article>
+            <article>
+              <span>Total kilometers</span>
+              <strong>{formatDistance(myTotalKilometers)} km</strong>
+            </article>
+            <article>
+              <span>Total time</span>
+              <strong>{myTotalMinutes} min</strong>
+            </article>
             <article>
               <span>Average speed</span>
-              <strong>{myTotalKilometers > 0 ? formatSpeed(myTotalKilometers, myTotalMinutes) : "--"}</strong>
+              <strong>{averageSpeedValue > 0 ? `${averageSpeedValue.toFixed(1)} km/h` : "--"}</strong>
             </article>
+            <article>
+              <span>Longest run</span>
+              <strong>{formatDistance(longestRunKm)} km</strong>
+            </article>
+          </div>
         </div>
+
+        <section className="analytics-chart">
+          <div className="analytics-chart-head">
+            <h3>Recent distance progress</h3>
+            <span>Last {recentRuns.length || 0} runs</span>
+          </div>
+          <div className="analytics-bars">
+            {recentRuns.length ? (
+              recentRuns.map((run) => {
+                const distanceKm = run.miles * KM_PER_MILE;
+                const width = Math.max(8, Math.round((distanceKm / recentMaxDistance) * 100));
+
+                return (
+                  <div key={run.id} className="analytics-bar-row">
+                    <span className="analytics-bar-label">{run.title}</span>
+                    <div className="analytics-bar-track">
+                      <div className="analytics-bar-fill" style={{ width: `${width}%` }} />
+                    </div>
+                    <strong>{formatDistance(distanceKm)} km</strong>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="status">No runs yet. Create your first run to see progress charts.</p>
+            )}
+          </div>
+        </section>
       </>
     );
   }
@@ -1243,6 +1288,20 @@ function formatDate(value) {
 
 function formatDistance(value) {
   return Number(value.toFixed(1));
+}
+
+function calculateAverageSpeed(totalKilometers, totalMinutes) {
+  if (!Number.isFinite(totalKilometers) || !Number.isFinite(totalMinutes) || totalMinutes <= 0) {
+    return 0;
+  }
+  return totalKilometers / (totalMinutes / 60);
+}
+
+function calculateConsistencyPercent(runCount) {
+  if (!Number.isFinite(runCount) || runCount <= 0) {
+    return 0;
+  }
+  return Math.min(100, Math.round((runCount / 20) * 100));
 }
 
 function mergeRunsById(primaryRuns, secondaryRuns) {
