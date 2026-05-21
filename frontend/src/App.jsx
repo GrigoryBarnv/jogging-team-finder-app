@@ -5,6 +5,9 @@ import JoinRunMessageModal from "./JoinRunMessageModal";
 import RunMessagesPanel from "./RunMessagesPanel";
 import RunEditModal from "./RunEditModal";
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const AUTH_BASE = (import.meta.env.VITE_AUTH_BASE_URL || API_BASE || "http://localhost:8080").replace(/\/$/, "");
+
 const KM_PER_MILE = 1.609344;
 const DRESDEN_DISTRICTS = [
   "Altstadt",
@@ -26,6 +29,10 @@ const EMPTY_RUN_FORM = {
   startedOn: "",
   durationMinutes: ""
 };
+
+function apiUrl(path) {
+  return API_BASE ? `${API_BASE}${path}` : path;
+}
 
 function buildRunFormFromRun(run) {
   return {
@@ -76,7 +83,7 @@ function App() {
   useEffect(() => {
     async function loadCurrentUser() {
       try {
-        const response = await fetch("/api/auth/me");
+        const response = await fetch(apiUrl("/api/auth/me"));
 
         if (!response.ok) {
           return;
@@ -118,7 +125,7 @@ function App() {
       }
 
       const search = params.toString();
-      const response = await fetch(`/api/runs/future${search ? `?${search}` : ""}`);
+      const response = await fetch(apiUrl(`/api/runs/future${search ? `?${search}` : ""}`));
 
       if (!response.ok) {
         if (hasSearchCriteria) {
@@ -155,7 +162,7 @@ function App() {
   }
 
   async function fetchMyRuns() {
-    const response = await fetch("/api/runs/me");
+    const response = await fetch(apiUrl("/api/runs/me"));
 
     if (!response.ok) {
       return;
@@ -167,7 +174,7 @@ function App() {
   }
 
   async function fetchMessages() {
-    const response = await fetch("/api/messages");
+    const response = await fetch(apiUrl("/api/messages"));
 
     if (!response.ok) {
       return;
@@ -179,7 +186,7 @@ function App() {
   }
 
   async function fetchUnreadMessageCount() {
-    const response = await fetch("/api/messages/unread-count");
+    const response = await fetch(apiUrl("/api/messages/unread-count"));
 
     if (!response.ok) {
       return;
@@ -201,7 +208,7 @@ function App() {
       setSavingNickname(true);
       setNicknameError("");
 
-      const response = await fetch("/api/auth/nickname", {
+      const response = await fetch(apiUrl("/api/auth/nickname"), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -227,11 +234,11 @@ function App() {
   }
 
   function startGoogleLogin() {
-    window.location.href = "http://localhost:8080/oauth2/authorization/google";
+    window.location.href = `${AUTH_BASE}/oauth2/authorization/google`;
   }
 
   function logout() {
-    window.location.href = "http://localhost:8080/logout";
+    window.location.href = `${AUTH_BASE}/logout`;
   }
 
   function openProfilePanel(panel) {
@@ -253,7 +260,7 @@ function App() {
     setProfilePanel("messages");
     setProfileMenuOpen(false);
     await fetchMessages();
-    await fetch("/api/messages/mark-read", { method: "POST" }).catch(() => {});
+    await fetch(apiUrl("/api/messages/mark-read"), { method: "POST" }).catch(() => {});
     await fetchUnreadMessageCount();
   }
 
@@ -276,7 +283,7 @@ function App() {
     }
 
     try {
-      const response = await fetch(`/api/auth/display-name?email=${encodeURIComponent(run.userEmail)}`);
+      const response = await fetch(apiUrl(`/api/auth/display-name?email=${encodeURIComponent(run.userEmail)}`));
       if (!response.ok) {
         return;
       }
@@ -309,7 +316,7 @@ function App() {
       setSendingJoinMessage(true);
       setJoinMessageError("");
 
-      const response = await fetch("/api/messages", {
+      const response = await fetch(apiUrl("/api/messages"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -349,7 +356,7 @@ function App() {
       setReplyingMessageId(messageId);
       setReplyError("");
 
-      const response = await fetch(`/api/messages/${messageId}/reply`, {
+      const response = await fetch(apiUrl(`/api/messages/${messageId}/reply`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -425,7 +432,7 @@ function App() {
       const kilometers = parseKilometers(runForm.miles);
 
       const isEditing = editingRunId != null;
-      const response = await fetch(isEditing ? `/api/runs/${editingRunId}` : "/api/runs", {
+      const response = await fetch(apiUrl(isEditing ? `/api/runs/${editingRunId}` : "/api/runs"), {
         method: isEditing ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json"
@@ -463,7 +470,7 @@ function App() {
   async function deleteRun(id) {
     try {
       setError("");
-      const response = await fetch(`/api/runs/${id}`, {
+      const response = await fetch(apiUrl(`/api/runs/${id}`), {
         method: "DELETE"
       });
 
