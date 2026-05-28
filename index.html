@@ -1,21 +1,231 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JogTeams</title>
-    <meta
-      name="description"
-      content="JogTeams training dashboard built with React and backed by Spring Boot."
-    />
-    <link rel="apple-touch-icon" sizes="180x180" href="/jogging-team-finder-app/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/jogging-team-finder-app/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/jogging-team-finder-app/favicon-16x16.png" />
-    <link rel="manifest" href="/jogging-team-finder-app/site.webmanifest" />
-    <script type="module" crossorigin src="/jogging-team-finder-app/assets/index-BVipJTuW.js"></script>
-    <link rel="stylesheet" crossorigin href="/jogging-team-finder-app/assets/index-D2Saduv8.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-  </html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JogTeams - Find Your Jogging Team</title>
+  <meta name="description" content="JogTeams helps you find jogging teammates and build consistent social running habits." />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <style>
+    :root {
+      --accent: #f97316;
+      --accent-dark: #ea580c;
+      --soft: #fff7ed;
+      --text: #2f2f2f;
+      --muted: #666;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; color: var(--text); line-height: 1.6; }
+    header { position: fixed; top: 0; left: 0; right: 0; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.08); z-index: 1000; }
+    nav { max-width: 1200px; margin: 0 auto; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .logo { color: var(--accent); font-weight: 700; font-size: 1.4rem; text-decoration: none; display: flex; align-items: center; gap: .5rem; }
+    .nav-links { list-style: none; display: flex; gap: 1.25rem; }
+    .nav-links a { text-decoration: none; color: #333; font-weight: 600; }
+    .nav-links a:hover { color: var(--accent); }
+    .btn { border: none; border-radius: 999px; padding: .75rem 1.25rem; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-ghost { background: #fff; color: var(--accent); border: 2px solid var(--accent); }
+
+    section { padding: 84px 1.25rem 0; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .hero-wrap { background: linear-gradient(140deg, #fff7ed, #ffedd5); border-radius: 20px; padding: 120px 2rem 3rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
+    h1 { font-size: 3rem; color: var(--accent-dark); line-height: 1.15; margin-bottom: 1rem; }
+    .lead { color: var(--muted); margin-bottom: 1.25rem; }
+    .hero-points { list-style: none; margin-bottom: 1.5rem; }
+    .hero-points li { margin-bottom: .4rem; }
+    .hero-points i { color: #10b981; margin-right: .4rem; }
+    .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .hero-grid img { width: 100%; border-radius: 14px; object-fit: cover; min-height: 150px; }
+    .hero-grid img:first-child { grid-column: span 2; min-height: 220px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem; }
+    .card { background: #fff; border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.08); padding: 1.5rem; }
+    .stat h2 { color: var(--accent); font-size: 2rem; margin-bottom: .25rem; }
+
+    .tint { background: var(--soft); margin-top: 3rem; padding-bottom: 3rem; }
+    .section-title { text-align: center; color: var(--accent-dark); font-size: 2.2rem; margin-bottom: .5rem; }
+    .section-sub { text-align: center; color: var(--muted); margin-bottom: 2rem; }
+    .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .step .num { width: 42px; height: 42px; border-radius: 999px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; margin-bottom: 1rem; }
+
+    .testimonials { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .stars { color: #f59e0b; margin-bottom: .75rem; }
+    .quote { font-style: italic; color: var(--muted); margin-bottom: .9rem; }
+
+    .benefits { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .benefits ul { list-style: none; }
+    .benefits li { margin: .5rem 0; color: var(--muted); }
+    .benefits i { color: #10b981; margin-right: .45rem; }
+
+    .faq-list { max-width: 800px; margin: 0 auto; }
+    .faq-item { border: 1px solid #fed7aa; border-radius: 10px; margin-bottom: .75rem; background: #fff; }
+    .faq-q { width: 100%; border: none; background: none; text-align: left; padding: 1rem; font-weight: 700; color: #333; cursor: pointer; display: flex; justify-content: space-between; }
+    .faq-a { display: none; padding: 0 1rem 1rem; color: var(--muted); }
+    .faq-item.active .faq-a { display: block; }
+
+    .cta { text-align: center; background: linear-gradient(140deg, var(--accent), var(--accent-dark)); color: #fff; padding: 3rem 1rem; margin-top: 3rem; }
+
+    footer { background: var(--accent-dark); color: #fff; padding: 2rem 1.25rem; }
+    .foot { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    footer a { color: #fff; text-decoration: none; opacity: .95; }
+
+    @media (max-width: 900px) {
+      .nav-links { display: none; }
+      .hero-wrap { grid-template-columns: 1fr; padding-top: 110px; }
+      .stats, .steps, .testimonials, .benefits, .foot { grid-template-columns: 1fr; }
+      h1 { font-size: 2.15rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <a class="logo" href="#home"><i class="fa-solid fa-person-running"></i> JogTeams</a>
+      <ul class="nav-links">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#process">How It Works</a></li>
+        <li><a href="#voices">Voices</a></li>
+        <li><a href="#benefits">Benefits</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+      <a class="btn btn-primary" href="/oauth2/authorization/google">Login with Google</a>
+    </nav>
+  </header>
+
+  <section id="home">
+    <div class="container hero-wrap">
+      <div>
+        <h1>Find Your Jogging Team Partner.</h1>
+        <p class="lead">JogTeams helps you meet nearby runners, stay consistent, and make daily jogging more social and fun.</p>
+        <ul class="hero-points">
+          <li><i class="fa-solid fa-circle-check"></i> Join local runners near you</li>
+          <li><i class="fa-solid fa-circle-check"></i> Build accountability and motivation</li>
+          <li><i class="fa-solid fa-circle-check"></i> Keep all your current JogTeams app features</li>
+        </ul>
+        <a class="btn btn-primary" href="/oauth2/authorization/google">Start with Google</a>
+        <a class="btn btn-ghost" href="./app.html" style="margin-left:.5rem;">Open Full App</a>
+      </div>
+      <div class="hero-grid">
+        <img src="./jog_together_1.png" alt="Jogging team introduction" />
+        <img src="./jog_together_2.png" alt="Jogging community" />
+        <img src="./jog_together_3.png" alt="Runner teammates" />
+      </div>
+    </div>
+    <div class="container stats">
+      <article class="card stat"><h2>1,200+</h2><p>Runner Profiles</p></article>
+      <article class="card stat"><h2>4,800+</h2><p>Team Runs Joined</p></article>
+      <article class="card stat"><h2>95%</h2><p>Say Running Is More Fun in Teams</p></article>
+    </div>
+  </section>
+
+  <section id="process" class="tint">
+    <div class="container">
+      <h2 class="section-title">How It Works?</h2>
+      <p class="section-sub">4 steps to find your jogging teammate</p>
+      <div class="steps">
+        <article class="card step"><div class="num">1</div><h3>Fill the Form</h3><p>Add your running level, pace, location and schedule preferences.</p></article>
+        <article class="card step"><div class="num">2</div><h3>Get Verified</h3><p>Confirm your account details to keep the community trusted and safe.</p></article>
+        <article class="card step"><div class="num">3</div><h3>Get Notified</h3><p>Receive alerts when matching jogging partners or runs are available.</p></article>
+        <article class="card step"><div class="num">4</div><h3>Find a Teammate</h3><p>Connect, chat, and start running together regularly.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="voices">
+    <div class="container">
+      <h2 class="section-title">Voices from Jogging Teams</h2>
+      <div class="testimonials">
+        <article class="card"><div class="stars">★★★★★</div><p class="quote">"JogTeams helped me make my daily jogging more social and fun."</p><strong>Lea, Dresden</strong></article>
+        <article class="card"><div class="stars">★★★★★</div><p class="quote">"I finally found teammates with the same pace and goals."</p><strong>Marco, Neustadt</strong></article>
+        <article class="card"><div class="stars">★★★★★</div><p class="quote">"It keeps me consistent because someone is always waiting to run."</p><strong>Sofia, Blasewitz</strong></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="benefits" class="tint">
+    <div class="container">
+      <h2 class="section-title">Benefits of Jogging in a Team</h2>
+      <div class="benefits">
+        <article class="card">
+          <h3><i class="fa-solid fa-heart-pulse" style="color:var(--accent)"></i> Health & Performance</h3>
+          <ul>
+            <li><i class="fa-solid fa-check"></i> Better consistency through shared schedules</li>
+            <li><i class="fa-solid fa-check"></i> Improved pace and endurance over time</li>
+            <li><i class="fa-solid fa-check"></i> Safer runs, especially early mornings or evenings</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3><i class="fa-solid fa-users" style="color:var(--accent)"></i> Social Motivation</h3>
+          <ul>
+            <li><i class="fa-solid fa-check"></i> Strong accountability and fewer skipped sessions</li>
+            <li><i class="fa-solid fa-check"></i> New friendships and local community</li>
+            <li><i class="fa-solid fa-check"></i> More enjoyment and less solo-running fatigue</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="container">
+      <h2 class="section-title">FAQ</h2>
+      <div class="faq-list">
+        <div class="faq-item"><button class="faq-q">How do I find teammates near me? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-a">Fill your profile and use the run search. JogTeams suggests people based on district, pace and availability.</div></div>
+        <div class="faq-item"><button class="faq-q">Do I need to pay to join runs? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-a">No, basic teammate matching and run posting are available in the current app functionality.</div></div>
+        <div class="faq-item"><button class="faq-q">Can I create my own run event? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-a">Yes. After login, you can create, edit and manage runs exactly like in the existing JogTeams app.</div></div>
+        <div class="faq-item"><button class="faq-q">Is Google login required? <i class="fa-solid fa-chevron-down"></i></button><div class="faq-a">Google login is the fastest way to verify your account and unlock all features.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2>Ready to Find Your Team?</h2>
+    <p>Join JogTeams and turn solo jogging into a social routine.</p>
+    <p style="margin-top:1rem;">
+      <a class="btn btn-ghost" style="background:#fff; border-color:#fff; color:var(--accent-dark);" href="/oauth2/authorization/google">Login with Google</a>
+      <a class="btn" style="background:transparent; border:2px solid #fff; color:#fff; margin-left:.5rem;" href="./app.html">Open Full App</a>
+    </p>
+  </section>
+
+  <footer id="contact">
+    <div class="foot">
+      <div>
+        <h3>JogTeams</h3>
+        <p>Find jogging teammates and grow your running habit together.</p>
+      </div>
+      <div>
+        <h3>Quick Links</h3>
+        <p><a href="#home">Home</a></p>
+        <p><a href="#process">How It Works</a></p>
+        <p><a href="#benefits">Benefits</a></p>
+      </div>
+      <div>
+        <h3>Support</h3>
+        <p><a href="#faq">FAQ</a></p>
+        <p><a href="#contact">Contact</a></p>
+        <p><a href="./app.html">Open App</a></p>
+      </div>
+      <div>
+        <h3>Contact Info</h3>
+        <p><i class="fa-solid fa-envelope"></i> support@jogteams.app</p>
+        <p><i class="fa-solid fa-location-dot"></i> Dresden, Germany</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll('.faq-q').forEach((button) => {
+      button.addEventListener('click', () => {
+        const item = button.parentElement;
+        document.querySelectorAll('.faq-item').forEach((el) => {
+          if (el !== item) el.classList.remove('active');
+        });
+        item.classList.toggle('active');
+      });
+    });
+  </script>
+</body>
+</html>
